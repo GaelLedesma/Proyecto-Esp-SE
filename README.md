@@ -299,6 +299,7 @@ Esto permite que el sistema funcione de forma estable incluso en condiciones no 
 Con esta sección, el README ahora documenta:
 
 - la carpeta `esp32` (**interacción física**),
-- la carpeta `backend` (**procesamiento inteligente**).
+- la carpeta `backend` (**procesamiento inteligente**),
+- la carpeta `frontend` (**interfaz visual del sistema**).
 
-En futuras versiones se añadirá la documentación del frontend y diagramas completos del sistema.
+En futuras versiones se añadirán diagramas completos de arquitectura y flujo del sistema.
