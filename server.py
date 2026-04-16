@@ -11,6 +11,9 @@ import os
 import time
 from pathlib import Path
 
+from constants import *
+from kb_data import kb_base, equivalentes, system_prompt
+
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading", logger=False, engineio_logger=False)
 app.config['JSON_AS_ASCII'] = False
@@ -23,53 +26,13 @@ def handle_connect():
 def handle_disconnect():
     print("❌ Cliente desconectado")
 
-model = whisper.load_model("base")
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "qwen3:1.7b"
-
 audio_chunks = []
 modoIA_flag = True
 modo_kb = False
 ultima_respuesta = ""
 
-BASE_DIR = Path(__file__).resolve().parent
-RESPONSE_MP3 = BASE_DIR / "response.mp3"
-RESPONSE_WAV = BASE_DIR / "response.wav"
 
 # ================= KB =================
-
-kb_base = {
-    ("harry", "hermione"): "amigos",
-    ("harry", "ron"): "mejores amigos",
-    ("harry", "voldemort"): "archienemigos",
-    ("harry", "dumbledore"): "mentor",
-    ("harry", "snape"): "relación compleja",
-    ("harry", "draco"): "rivales",
-    ("harry", "sirius"): "ahijado y padrino",
-    ("harry", "hagrid"): "protector",
-    ("harry", "luna"): "amigos",
-    ("harry", "ginny"): "pareja",
-    ("harry", "neville"): "compañeros",
-    ("hermione", "ron"): "pareja",
-    ("hermione", "hagrid"): "amigos",
-    ("hermione", "draco"): "enemigos",
-    ("hermione", "ginny"): "amigas",
-    ("ron", "ginny"): "hermanos",
-    ("ron", "dumbledore"): "aliados",
-    ("ron", "draco"): "enemigos",
-    ("voldemort", "dumbledore"): "enemigos",
-    ("voldemort", "bellatrix"): "aliados",
-    ("voldemort", "snape"): "alianza tensa",
-    ("snape", "lily"): "amor",
-    ("snape", "dumbledore"): "aliados secretos",
-    ("draco", "lucius"): "padre e hijo",
-    ("draco", "narcissa"): "madre e hijo",
-    ("sirius", "lupin"): "amigos",
-    ("fred", "george"): "hermanos gemelos",
-    ("james", "lily"): "pareja",
-    ("james", "snape"): "enemigos",
-    ("cedric", "harry"): "rivales amistosos",
-}
 
 kb = {}
 for (a, b), rel in kb_base.items():
@@ -78,77 +41,6 @@ for (a, b), rel in kb_base.items():
 
 def normalizar_palabra(palabra, entidades):
     palabra = palabra.lower().strip()
-
-    equivalentes = {
-        # harry
-        "hari": "harry",
-        "jari": "harry",
-        "ari": "harry",
-        "harri": "harry",
-        "jarry": "harry",
-        "hary": "harry",
-        "hary": "harry",
-
-        # hermione
-        "hermio": "hermione",
-        "ermio": "hermione",
-        "ermione": "hermione",
-        "hermion": "hermione",
-        "hermionee": "hermione",
-        "mione": "hermione",
-
-        # ron
-        "rom": "ron",
-        "roon": "ron",
-
-        # voldemort
-        "voldemor": "voldemort",
-        "boldemort": "voldemort",
-        "volde": "voldemort",
-
-        # dumbledore
-        "dumbladore": "dumbledore",
-        "dumbeldore": "dumbledore",
-        "dumbledor": "dumbledore",
-        "dumbador": "dumbledore",
-
-        # sirius
-        "siriu": "sirius",
-        "sirius": "sirius",
-
-        # snape
-        "esneip": "snape",
-        "sneip": "snape",
-
-        # hagrid
-        "jagrid": "hagrid",
-        "agrid": "hagrid",
-
-        # draco
-        "drako": "draco",
-
-        # ginny
-        "gini": "ginny",
-        "gini": "ginny",
-
-        # lupin
-        "lupen": "lupin",
-
-        # neville
-        "nevil": "neville",
-
-        # bellatrix
-        "belatrix": "bellatrix",
-
-        # lucius
-        "lusius": "lucius",
-
-        # narcissa
-        "narsisa": "narcissa",
-
-        # cedric
-        "cedrik": "cedric",
-    }
 
     if palabra in equivalentes:
         return equivalentes[palabra]
@@ -311,24 +203,6 @@ def procesar():
             return responder_kb(user_text, "No encontrado en la base de conocimiento")
 
     # ===== IA =====
-
-    # 🔥 prompt completo restaurado
-    system_prompt = (
-        "Eres un asistente de voz inteligente integrado en un dispositivo.\n"
-        "Responde SIEMPRE en español.\n"
-        "\n"
-        "Reglas:\n"
-        "- Responde de forma breve, clara y natural (máximo 1-2 frases).\n"
-        "- No inventes código.\n"
-        "- Solo responde con código si el usuario dice explícitamente la palabra 'codigo'.\n"
-        "- Si generas código, devuelve SOLO el código sin explicaciones.\n"
-        "- Si NO es código, responde como una persona normal, sin mencionar que eres una IA.\n"
-        "- Evita respuestas largas o técnicas innecesarias.\n"
-        "\n"
-        "Contexto:\n"
-        "- El usuario habla por voz.\n"
-        "- La respuesta puede convertirse en audio, así que debe sonar natural.\n"
-    )
 
     full_prompt = f"{system_prompt}\nUsuario: {user_text}\nAsistente:"
 
