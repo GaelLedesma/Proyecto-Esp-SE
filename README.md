@@ -28,11 +28,19 @@ Este enfoque combina elementos de **hardware**, **comunicación en red**, **proc
 
 > Más adelante se agregarán diagramas de arquitectura, flujo y conexiones para complementar esta explicación.
 
+## Diagrama general del sistema
+
+![Diagrama completo](images/diagramaCompleto.png)
+
 ---
 
 ## Carpeta `esp32`
 
 La carpeta `esp32` contiene la parte correspondiente al firmware del dispositivo. Aquí se encuentra el código necesario para que el ESP32 controle el micrófono, la bocina, el display y los botones físicos, además de la comunicación básica con el sistema externo.
+
+## Diagrama del módulo ESP32
+
+![Diagrama ESP32](images/diagrama-esp.png)
 
 Su propósito principal es convertir al ESP32 en un módulo de interacción física capaz de:
 
