@@ -26,8 +26,6 @@ De manera general, el flujo del proyecto es el siguiente:
 
 Este enfoque combina elementos de **hardware**, **comunicación en red**, **procesamiento de audio** y **automatización de interacción con IA**, lo que lo convierte en un proyecto integrador dentro del contexto de la materia.
 
-> Más adelante se agregarán diagramas de arquitectura, flujo y conexiones para complementar esta explicación.
-
 ## Diagrama general del sistema
 
 ![Diagrama completo](images/diagramaCompleto.png)
@@ -196,9 +194,9 @@ El frontend está pensado como una capa ligera y flexible. No concentra lógica 
 
 Su objetivo principal es servir como interfaz visual del sistema.
 
----
+## Diagrama del módulo Frontend
 
-## Alcance actual de esta documentación
+![Diagrama Frontend](images/diagramaFrontend.png)
 
 ---
 
@@ -207,6 +205,10 @@ Su objetivo principal es servir como interfaz visual del sistema.
 La carpeta `backend` contiene el sistema encargado de procesar la información enviada por el ESP32. Aquí es donde ocurre la mayor parte de la lógica inteligente del proyecto, incluyendo el reconocimiento de voz, la interacción con el modelo de inteligencia artificial y la generación de audio de respuesta.
 
 A diferencia del módulo ESP32, que se enfoca en la interacción física, el backend funciona como el “cerebro” del sistema.
+
+## Diagrama del módulo Backend
+
+![Diagrama Backend](images/diagramaBackend.png)
 
 ### ¿Qué hace el backend?
 
@@ -297,10 +299,6 @@ El backend fue diseñado con enfoque en:
 - y claridad en el flujo de procesamiento.
 
 Esto permite que el sistema funcione de forma estable incluso en condiciones no ideales de red o procesamiento.
-
----
-
-## Alcance actual
 
 ---
 
