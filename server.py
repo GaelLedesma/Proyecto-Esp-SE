@@ -196,18 +196,48 @@ def responder_kb(user_text, respuesta):
     print(f"🗣 Usuario: {user_text}")
     print(f"📚 KB: {respuesta}\n")
 
+    audio_url = ""
+
+    try:
+        tmp_mp3 = BASE_DIR / f"response_tmp_{int(time.time()*1000)}.mp3"
+        tmp_wav = BASE_DIR / f"response_tmp_{int(time.time()*1000)}.wav"
+
+        tts = gTTS(respuesta, lang='es')
+        tts.save(str(tmp_mp3))
+
+        result = subprocess.run([
+            "ffmpeg", "-y",
+            "-i", str(tmp_mp3),
+            "-ar", "16000",
+            "-ac", "1",
+            "-sample_fmt", "s16",
+            str(tmp_wav)
+        ], capture_output=True, text=True)
+
+        if result.returncode == 0 and tmp_wav.exists():
+            os.replace(str(tmp_mp3), str(RESPONSE_MP3))
+            os.replace(str(tmp_wav), str(RESPONSE_WAV))
+
+            audio_url = f"http://192.168.100.18:5001/audio_response?t={int(time.time())}"
+        else:
+            audio_url = ""
+
+    except Exception as e:
+        print("❌ Error audio KB:", e)
+        audio_url = ""
+
     socketio.emit("respuesta", {
         "text": user_text,
         "ai_response": respuesta,
         "is_code": False,
-        "audio_url": ""
+        "audio_url": audio_url
     })
 
     return {
         "text": user_text,
         "ai_response": respuesta,
         "is_code": False,
-        "audio_url": ""
+        "audio_url": audio_url
     }
 
 # ================= AUDIO =================
@@ -227,7 +257,15 @@ def finalizar():
 
     if data and "modoIA" in data:
         modoIA_flag = bool(data["modoIA"])
-
+    # 🔥 BORRAR audios ANTES de procesar nueva pregunta
+    try:
+        if RESPONSE_MP3.exists():
+            RESPONSE_MP3.unlink()
+        if RESPONSE_WAV.exists():
+            RESPONSE_WAV.unlink()
+        print("🧹 Audios previos eliminados antes de procesar")
+    except Exception as e:
+        print("⚠️ Error limpiando audios previos:", e)
     return procesar()
 
 @app.route("/procesar", methods=["GET"])
@@ -373,7 +411,7 @@ def procesar():
 
             print("📢 Audio final actualizado (atomic replace)")
 
-            audio_url = f"http://192.168.100.3:5001/audio_response?t={int(time.time())}"
+            audio_url = f"http://192.168.100.18:5001/audio_response?t={int(time.time())}"
 
         except Exception as e:
             print("❌ Error audio:", e)
