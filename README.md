@@ -8,19 +8,21 @@
 
 ## Descripción general del proyecto
 
+> 🔥 **Proyecto integrador de hardware + IA + procesamiento de audio en tiempo real.**
+
 Este proyecto consiste en el desarrollo de un dispositivo físico basado en **ESP32** que funciona como una interfaz de interacción con un sistema de inteligencia artificial. La idea principal es que el usuario pueda comunicarse con el sistema mediante **voz**, recibir una respuesta en **audio reproducido por bocina**, y al mismo tiempo visualizar información importante en un **display LED matricial**.
 
 El ESP32 actúa como el componente central del sistema embebido. A través de sus botones físicos, el usuario puede iniciar acciones como grabar audio, reproducir nuevamente la última respuesta y cancelar una reproducción en curso. Esta interacción hace que el dispositivo sea más natural de usar, ya que no depende únicamente de una interfaz gráfica tradicional.
 
 De manera general, el flujo del proyecto es el siguiente:
 
-- El usuario presiona un botón para comenzar a grabar.
-- El ESP32 captura audio desde un micrófono conectado por I2S.
-- El dispositivo envía ese audio a un sistema externo que procesa la información.
-- Después, el ESP32 recibe la respuesta generada y la presenta de dos maneras:
+- El usuario presiona un **botón** para comenzar a grabar.
+- El ESP32 captura **audio** desde un micrófono conectado por **I2S**.
+- El dispositivo envía ese audio a un **sistema externo (backend)** que procesa la información.
+- Después, el ESP32 recibe la **respuesta generada** y la presenta de dos maneras:
   - mediante texto mostrado en el display,
   - y mediante audio reproducido en una bocina.
-- El usuario también puede repetir la última respuesta o cancelar una reproducción usando botones dedicados.
+- El usuario también puede repetir la última respuesta o cancelar la reproducción usando botones dedicados.
 
 Este enfoque combina elementos de **hardware**, **comunicación en red**, **procesamiento de audio** y **automatización de interacción con IA**, lo que lo convierte en un proyecto integrador dentro del contexto de la materia.
 
@@ -141,7 +143,7 @@ También se buscó que la interacción del usuario fuera lo más directa posible
 
 La carpeta `frontend` contiene la interfaz de usuario del sistema. Esta parte del proyecto permite visualizar la información generada por el backend y facilita la interacción desde un navegador web.
 
-Aunq ue el ESP32 es el principal medio de interacción física, el frontend funciona como una herramienta complementaria para monitorear, probar y extender el sistema.
+Aunque el ESP32 es el principal medio de interacción física, el frontend funciona como una herramienta complementaria para monitorear, probar y extender el sistema.
 
 ### ¿Qué hace el frontend?
 
@@ -240,7 +242,7 @@ El funcionamiento general del backend es el siguiente:
 El sistema incluye un modo especial activado por voz mediante la frase:
 
 ```
-modo conocimiento
+**"modo conocimiento"**
 ```
 
 En este modo, el backend utiliza una base de conocimiento inspirada en relaciones de personajes (tipo lógica estilo Prolog). El sistema puede:
@@ -292,9 +294,11 @@ Esto permite que el sistema funcione de forma estable incluso en condiciones no 
 
 ## Alcance actual
 
+---
+
 Con esta sección, el README ahora documenta:
 
-- la carpeta `esp32` (interacción física),
-- y la carpeta `backend` (procesamiento inteligente).
+- la carpeta `esp32` (**interacción física**),
+- la carpeta `backend` (**procesamiento inteligente**).
 
 En futuras versiones se añadirá la documentación del frontend y diagramas completos del sistema.
