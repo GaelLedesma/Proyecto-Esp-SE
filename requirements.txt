@@ -1,0 +1,7 @@
+pyserial
+openai-whisper
+numpy
+soundfile
+flask
+gtts
+flask-socketio
