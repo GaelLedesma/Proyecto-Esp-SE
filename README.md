@@ -8,7 +8,7 @@
 
 ## Descripción general del proyecto
 
-> 🔥 **Proyecto integrador de hardware + IA + procesamiento de audio en tiempo real.**
+> **Proyecto integrador de hardware + IA + procesamiento de audio en tiempo real.**
 
 Este proyecto consiste en el desarrollo de un dispositivo físico basado en **ESP32** que funciona como una interfaz de interacción con un sistema de inteligencia artificial. La idea principal es que el usuario pueda comunicarse con el sistema mediante **voz**, recibir una respuesta en **audio reproducido por bocina**, y al mismo tiempo visualizar información importante en un **display LED matricial**.
 
