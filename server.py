@@ -10,6 +10,7 @@ import subprocess
 import os
 import time
 from pathlib import Path
+from collections import deque
 
 from constants import *
 from kb_data import kb_base, equivalentes, system_prompt
@@ -30,10 +31,17 @@ audio_chunks = []
 modoIA_flag = True
 modo_kb = False
 ultima_respuesta = ""
+contexto_historial = []
+modo_contexto = False
 
 
 # ================= KB =================
-
+colores_css = {
+    "azul": "#3498db",
+    "rojo": "#e74c3c",
+    "amarillo": "#f1c40f",
+    "morado": "#9b59b6"
+}
 kb = {}
 for (a, b), rel in kb_base.items():
     kb[(a, b)] = rel
@@ -77,6 +85,33 @@ def buscar_relacion(texto):
             rel = kb.get((p1, p2))
             if rel:
                 return p1, p2, rel
+
+    return None
+def buscar_relacion_profunda(p1, p2, max_depth=3):
+
+    queue = deque([(p1, [], 0)])
+
+    visited = set()
+
+    while queue:
+
+        current, path, depth = queue.popleft()
+
+        if depth > max_depth:
+
+            continue
+
+        if current == p2:
+
+            return path
+
+        visited.add(current)
+
+        for (a, b), rel in kb.items():
+
+            if a == current and b not in visited:
+
+                queue.append((b, path + [(a, b, rel)], depth + 1))
 
     return None
 
@@ -160,9 +195,15 @@ def finalizar():
         print("⚠️ Error limpiando audios previos:", e)
     return procesar()
 
+@app.route("/finalizar_contexto", methods=["POST"])
+def finalizar_contexto():
+    global modo_contexto
+    modo_contexto = True
+    return finalizar()
+
 @app.route("/procesar", methods=["GET"])
 def procesar():
-    global audio_chunks, ultima_respuesta
+    global audio_chunks, ultima_respuesta, modo_contexto
 
     if len(audio_chunks) == 0:
         return {"error": "No hay audio"}
@@ -180,6 +221,30 @@ def procesar():
     result = model.transcribe("audio.wav")
     user_text = result["text"]
     user_text_lower = user_text.lower()
+
+    # ===== COLORES =====
+    for color, hex_val in colores_css.items():
+        if color in user_text_lower:
+            respuesta_color = f"{color}: {hex_val}"
+
+            print("\n🎨 Color detectado:")
+            print(respuesta_color)
+
+            socketio.emit("respuesta", {
+                "text": user_text,
+                "ai_response": respuesta_color,
+                "is_code": False,
+                "color": hex_val,
+                "audio_url": ""
+            })
+
+            return {
+                "text": user_text,
+                "ai_response": respuesta_color,
+                "is_code": False,
+                "color": hex_val,
+                "audio_url": ""
+            }
 
     # ===== KB =====
     global modo_kb
@@ -200,11 +265,33 @@ def procesar():
             p1, p2, rel = match
             return responder_kb(user_text, f"{p1} y {p2}: {rel}")
         else:
+            entidades = set([e for par in kb.keys() for e in par])
+            normalizados = []
+
+            for t in user_text_lower.split():
+                n = normalizar_palabra(t, entidades)
+                if n:
+                    normalizados.append(n)
+
+            if len(normalizados) >= 2:
+                p1, p2 = normalizados[0], normalizados[1]
+
+                camino = buscar_relacion_profunda(p1, p2)
+
+                if camino:
+                    texto = f"{p1} está relacionado con {p2} a través de "
+                    texto += " → ".join([f"{a}-{b}" for (a,b,_) in camino])
+                    return responder_kb(user_text, texto)
+
             return responder_kb(user_text, "No encontrado en la base de conocimiento")
 
     # ===== IA =====
 
-    full_prompt = f"{system_prompt}\nUsuario: {user_text}\nAsistente:"
+    if modo_contexto and len(contexto_historial) > 0:
+        contexto_texto = "\n".join(contexto_historial[-6:])
+        full_prompt = f"{system_prompt}\n{contexto_texto}\nUsuario: {user_text}\nAsistente:"
+    else:
+        full_prompt = f"{system_prompt}\nUsuario: {user_text}\nAsistente:"
 
     ai_response = ""
 
@@ -230,6 +317,13 @@ def procesar():
             ai_response = ""
 
     ultima_respuesta = ai_response
+
+    if modo_contexto and ai_response:
+        ai_response = ai_response.strip() + " contexto"
+
+    if modo_contexto:
+        contexto_historial.append(f"Usuario: {user_text}")
+        contexto_historial.append(f"Asistente: {ai_response}")
 
     # ===== AUDIO FIX SIMPLE =====
     audio_url = ""
@@ -310,6 +404,8 @@ def procesar():
         "ai_response": ai_response,
         "audio_url": audio_url
     })
+
+    modo_contexto = False
 
     return {
         "text": user_text,

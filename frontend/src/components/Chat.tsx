@@ -8,6 +8,7 @@ type ChatMessage = {
   ai_response: string;
   is_code: boolean;
   audio_url?: string;
+  color?: string;
 };
 
 type ChatSession = {
@@ -23,6 +24,7 @@ export default function Chat() {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [typingMessage, setTypingMessage] = useState<ChatMessage | null>(null);
   const [displayedText, setDisplayedText] = useState("");
+  const [chatColor, setChatColor] = useState("#10a37f");
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -65,6 +67,9 @@ export default function Chat() {
   // 🔥 SOCKET
   useEffect(() => {
     socket.on("respuesta", (data: ChatMessage) => {
+      if ((data as any).color) {
+        setChatColor((data as any).color);
+      }
       let sessionId = currentId;
 
       // crear sesión si no existe
@@ -197,7 +202,7 @@ export default function Chat() {
               >
                 <div
                   style={{
-                    background: "#10a37f",
+                    background: chatColor,
                     padding: "12px 16px",
                     borderRadius: "16px",
                     maxWidth: "70%",
