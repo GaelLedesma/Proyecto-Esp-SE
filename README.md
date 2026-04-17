@@ -124,9 +124,57 @@ El dispositivo muestra mensajes en un display LED matricial, lo que ayuda a que 
 
 Una vez que el sistema obtiene una respuesta, esta puede reproducirse en una bocina. Esto convierte al proyecto en una interfaz mucho más natural, ya que el usuario no solo ve información, sino que también la escucha.
 
-### 5. Coordinación entre modos de entrada y salida
+---
 
-El firmware debe alternar correctamente entre el uso del micrófono y la reproducción de audio, evitando conflictos en el manejo de I2S. Esta coordinación es importante para que el dispositivo funcione de forma estable.
+## Instalación y ejecución
+
+### Backend
+
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python server.py
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### ESP32
+
+- Abrir `esp32/main.ino` en Arduino IDE
+- Configurar red WiFi
+- Subir el código al dispositivo
+
+---
+
+## Requisitos
+
+- Python 3.10 o superior
+- Node.js 18 o superior
+- Arduino IDE
+- ESP32
+- FFmpeg instalado en el sistema
+- Ollama ejecutándose localmente
+- Micrófono compatible con I2S
+- Bocina o amplificador I2S
+
+---
+
+## Mapeo de botones
+
+El dispositivo utiliza botones físicos conectados a pines GPIO del ESP32:
+
+- Botón 1 (GPIO 18): grabación de audio (modo normal)
+- Botón 2 (GPIO 19): grabación de audio con contexto conversacional
+- Botón 3 (GPIO 21): reproducción de la última respuesta
+- Botón 4 (GPIO 22): cancelación de reproducción
 
 ---
 
@@ -140,8 +188,6 @@ La parte del ESP32 fue planteada con una estructura modular. En vez de colocar t
 - y prepara mejor el código para futuras mejoras.
 
 También se buscó que la interacción del usuario fuera lo más directa posible: presionar un botón, hablar, esperar procesamiento y recibir una respuesta tanto visual como auditiva.
-
----
 
 ---
 
@@ -206,6 +252,21 @@ La carpeta `backend` contiene el sistema encargado de procesar la información e
 
 A diferencia del módulo ESP32, que se enfoca en la interacción física, el backend funciona como el “cerebro” del sistema.
 
+## Configuración
+
+El sistema requiere algunos valores configurables:
+
+- Dirección IP del backend (por defecto usada en el proyecto):
+  http://192.168.100.18:5001
+
+- Asegurar que Ollama esté activo en:
+  http://localhost:11434
+
+- Modelo utilizado:
+  qwen3:1.7b
+
+Estos valores pueden ajustarse dependiendo del entorno de red y hardware.
+
 ## Diagrama del módulo Backend
 
 ![Diagrama Backend](images/diagramaBackend.png)
@@ -268,6 +329,89 @@ Ejemplo:
 
 Este modo permite demostrar lógica simbólica dentro del proyecto.
 
+### Modo contexto (memoria conversacional)
+
+El sistema incorpora un segundo modo activado mediante el uso de un botón específico en el ESP32 (botón 2). Este modo permite mantener un historial de conversación que se utiliza como contexto para mejorar las respuestas de la IA.
+
+Cuando este modo está activo:
+
+- Se almacenan las últimas interacciones entre el usuario y el asistente.
+- El historial reciente se agrega al prompt enviado al modelo de IA.
+- La respuesta generada toma en cuenta el contexto previo.
+
+El historial se gestiona como una lista de mensajes tipo:
+
+- "Usuario: ..."
+- "Asistente: ..."
+
+Para evitar crecimiento excesivo, solo se utilizan los últimos mensajes relevantes.
+
+Además, como indicador visual, cada respuesta generada en este modo incluye la palabra:
+
+```
+contexto
+```
+
+al final del texto.
+
+---
+
+### Detección de colores por voz
+
+El backend incluye una funcionalidad adicional que permite cambiar dinámicamente el color de la interfaz del frontend mediante comandos de voz.
+
+Si el usuario menciona un color específico (por ejemplo: "azul", "rojo", "amarillo"), el sistema:
+
+- Detecta el color en el texto transcrito.
+- Devuelve su equivalente en formato hexadecimal (CSS).
+- Envía esta información al frontend mediante WebSockets.
+
+Ejemplo de respuesta:
+
+```
+amarillo: #f1c40f
+```
+
+El mensaje incluye un campo adicional:
+
+- `"color"` → código hexadecimal
+
+Esto permite que el frontend cambie el color de los mensajes en tiempo real.
+
+---
+
+### Comunicación en tiempo real (WebSockets)
+
+Además de los endpoints HTTP, el sistema utiliza WebSockets para enviar respuestas inmediatamente al frontend.
+
+Cada mensaje enviado incluye:
+
+- `text` → texto del usuario
+- `ai_response` → respuesta generada
+- `audio_url` → URL del audio
+- `is_code` → indica si la respuesta es código
+- `color` (opcional) → color dinámico para UI
+
+Esto permite:
+
+- renderizado en tiempo real,
+- animación tipo "typing",
+- actualización dinámica de estilos (como colores).
+
+---
+
+### Nuevos endpoints
+
+Se añadieron endpoints adicionales para soportar nuevas funcionalidades:
+
+- `/finalizar_contexto`  
+  Activa el modo contexto antes de procesar la petición.
+
+Este endpoint permite diferenciar entre:
+
+- modo normal (sin memoria),
+- modo con contexto conversacional.
+
 ### Generación de audio
 
 Para evitar errores de sincronización con el ESP32, el backend utiliza una estrategia robusta:
@@ -287,6 +431,7 @@ El backend expone endpoints clave:
 - `/finalizar` → inicia el procesamiento.
 - `/audio_response` → devuelve el audio final.
 - `/ultima_respuesta` → devuelve la última respuesta en texto.
+- `/finalizar_contexto` → procesa usando contexto conversacional.
 
 Además, usa WebSockets para enviar respuestas en tiempo real.
 
@@ -302,10 +447,33 @@ Esto permite que el sistema funcione de forma estable incluso en condiciones no 
 
 ---
 
-Con esta sección, el README ahora documenta:
+## Arquitectura del sistema
+
+El flujo general del sistema se puede representar de la siguiente forma:
+
+ESP32 → Backend (Flask)
+↓
+Whisper (Speech-to-Text)
+↓
+Ollama (Modelo de IA)
+↓
+gTTS + FFmpeg (Text-to-Speech)
+↓
+ESP32 + Frontend
+
+Este flujo describe cómo el audio del usuario se transforma en una respuesta procesada y reproducida.
+
+---
 
 - la carpeta `esp32` (**interacción física**),
 - la carpeta `backend` (**procesamiento inteligente**),
-- la carpeta `frontend` (**interfaz visual del sistema**).
+- la carpeta `frontend` (**interfaz visual del sistema**)
 
-En futuras versiones se añadirán diagramas completos de arquitectura y flujo del sistema.
+## Consideraciones actuales
+
+El sistema presenta algunas características importantes a tener en cuenta:
+
+- Dependencia de red local para la comunicación con el ESP32
+- Latencia variable en el procesamiento de audio
+- Limitaciones del modelo local en comprensión de contexto complejo
+- Sensibilidad del reconocimiento de voz a la calidad del audio capturado
