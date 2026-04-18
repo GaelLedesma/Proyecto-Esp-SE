@@ -242,7 +242,7 @@ Su objetivo principal es servir como interfaz visual del sistema.
 
 ## Diagrama del módulo Frontend
 
-![Diagrama Frontend](images/DiagramaFrontend.png)
+![Diagrama Frontend](images/DiagramaFront.png)
 
 ---
 
