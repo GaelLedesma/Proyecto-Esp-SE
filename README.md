@@ -32,6 +32,11 @@ Este enfoque combina elementos de **hardware**, **comunicación en red**, **proc
 
 ---
 
+## CASOS DE USO
+
+UC-01: Consultar por voz (modo normal)
+(images/Caso1.png)
+
 ## Carpeta `esp32`
 
 La carpeta `esp32` contiene la parte correspondiente al firmware del dispositivo. Aquí se encuentra el código necesario para que el ESP32 controle el micrófono, la bocina, el display y los botones físicos, además de la comunicación básica con el sistema externo.
@@ -269,7 +274,7 @@ Estos valores pueden ajustarse dependiendo del entorno de red y hardware.
 
 ## Diagrama del módulo Backend
 
-![Diagrama Backend](images/diagramaBackend.png)
+![Diagrama Backend](images/DiagramaBack.png)
 
 ### ¿Qué hace el backend?
 
