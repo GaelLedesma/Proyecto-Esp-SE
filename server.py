@@ -115,6 +115,45 @@ def buscar_relacion_profunda(p1, p2, max_depth=3):
 
     return None
 
+# Nueva función: responder_pregunta_kb
+def responder_pregunta_kb(texto):
+    texto = texto.lower()
+    entidades = set([e for par in kb.keys() for e in par])
+
+    stopwords = {"ay", "hay", "entre", "y", "es", "son", "de", "a", "el", "la", "los", "las", "un", "una"}
+
+    normalizados = []
+    for t in texto.replace("¿", "").replace("?", "").split():
+        if t in stopwords:
+            continue
+
+        n = normalizar_palabra(t, entidades)
+        if n and n not in normalizados:
+            normalizados.append(n)
+
+    if len(normalizados) < 2:
+        return None
+
+    p1, p2 = normalizados[0], normalizados[1]
+    rel = kb.get((p1, p2))
+
+    if "pareja" in texto:
+        if rel == "pareja":
+            return f"Sí, {p1} y {p2} son pareja"
+        return f"No, {p1} y {p2} no son pareja"
+
+    if "amor" in texto or "ama" in texto:
+        if rel == "amor":
+            return f"Sí, {p1} siente amor por {p2}"
+        return f"No, no se registra amor entre {p1} y {p2}"
+
+    if "enemigo" in texto or "enemigos" in texto:
+        if rel == "enemigos" or rel == "archienemigos":
+            return f"Sí, {p1} y {p2} son enemigos"
+        return f"No, {p1} y {p2} no son enemigos"
+
+    return None
+
 def responder_kb(user_text, respuesta):
     global ultima_respuesta
     ultima_respuesta = respuesta
@@ -145,7 +184,7 @@ def responder_kb(user_text, respuesta):
             os.replace(str(tmp_mp3), str(RESPONSE_MP3))
             os.replace(str(tmp_wav), str(RESPONSE_WAV))
 
-            audio_url = f"http://192.168.100.18:5001/audio_response?t={int(time.time())}"
+            audio_url = f"http://172.20.10.7:5001/audio_response?t={int(time.time())}"
         else:
             audio_url = ""
 
@@ -259,6 +298,9 @@ def procesar():
         return responder_kb(user_text, "Saliendo del modo conocimiento")
 
     if modo_kb:
+        respuesta_pregunta = responder_pregunta_kb(user_text_lower)
+        if respuesta_pregunta:
+            return responder_kb(user_text, respuesta_pregunta)
         match = buscar_relacion(user_text_lower)
 
         if match:
@@ -379,7 +421,7 @@ def procesar():
 
             print("📢 Audio final actualizado (atomic replace)")
 
-            audio_url = f"http://192.168.100.18:5001/audio_response?t={int(time.time())}"
+            audio_url = f"http://172.20.10.7:5001/audio_response?t={int(time.time())}"
 
         except Exception as e:
             print("❌ Error audio:", e)

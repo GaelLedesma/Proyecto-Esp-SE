@@ -40,6 +40,7 @@ equivalentes = {
     "harri": "harry",
     "jarry": "harry",
     "hary": "harry",
+    "happy": "harry",
 
     # hermione
     "hermio": "hermione",
@@ -52,6 +53,7 @@ equivalentes = {
     # ron
     "rom": "ron",
     "roon": "ron",
+    "bron": "ron",
 
     # voldemort
     "voldemor": "voldemort",
@@ -70,6 +72,7 @@ equivalentes = {
     # snape
     "esneip": "snape",
     "sneip": "snape",
+    "Snape": "snape",
 
     # hagrid
     "jagrid": "hagrid",
