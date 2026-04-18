@@ -184,7 +184,7 @@ def responder_kb(user_text, respuesta):
             os.replace(str(tmp_mp3), str(RESPONSE_MP3))
             os.replace(str(tmp_wav), str(RESPONSE_WAV))
 
-            audio_url = f"http://172.20.10.7:5001/audio_response?t={int(time.time())}"
+            audio_url = f"http://192.168.100.3/audio_response?t={int(time.time())}"
         else:
             audio_url = ""
 
@@ -257,7 +257,7 @@ def procesar():
 
     sf.write("audio.wav", audio, 16000)
 
-    result = model.transcribe("audio.wav")
+    result = model.transcribe("audio.wav", language="es")
     user_text = result["text"]
     user_text_lower = user_text.lower()
 
@@ -421,7 +421,7 @@ def procesar():
 
             print("📢 Audio final actualizado (atomic replace)")
 
-            audio_url = f"http://172.20.10.7:5001/audio_response?t={int(time.time())}"
+            audio_url = f"http://192.168.100.3/audio_response?t={int(time.time())}"
 
         except Exception as e:
             print("❌ Error audio:", e)

@@ -54,6 +54,7 @@ equivalentes = {
     "rom": "ron",
     "roon": "ron",
     "bron": "ron",
+    "rod": "ron",
 
     # voldemort
     "voldemor": "voldemort",
@@ -118,4 +119,5 @@ system_prompt = (
         "Contexto:\n"
         "- El usuario habla por voz.\n"
         "- La respuesta puede convertirse en audio, así que debe sonar natural.\n"
+        "Responde SIEMPRE con palabras completas, nunca truncadas."
     )
