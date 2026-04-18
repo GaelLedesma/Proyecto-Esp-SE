@@ -28,7 +28,7 @@ Este enfoque combina elementos de **hardware**, **comunicación en red**, **proc
 
 ## Diagrama general del sistema
 
-![Diagrama completo](images/diagramaCompleto.png)
+![Diagrama completo](images/DiagramaCompleto.png)
 
 ---
 
