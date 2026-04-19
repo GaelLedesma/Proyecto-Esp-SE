@@ -153,9 +153,18 @@
 
         let kills = 0;
 
-        const enemies = [
-            { x: 7, y: 7, hurtTimer: 0, hp: 5, dead: false }
-        ];
+        const enemies = [];
+
+        // generar zombie en posición válida
+        for (let i = 0; i < 1; i++) {
+            let x, y;
+            do {
+                x = Math.floor(Math.random() * 20);
+                y = Math.floor(Math.random() * 20);
+            } while (map[y][x] !== 0);
+
+            enemies.push({ x, y, hurtTimer: 0, hp: 5, dead: false });
+        }
 
         document.addEventListener("keydown", (e) => {
             let nx = player.x;
@@ -218,15 +227,22 @@
             }
 
             if (player.hp <= 0) {
-                message = "GAME OVER";
-                messageTimer = 9999;
+                message = "RESPAWN";
+                messageTimer = 60;
+
+                player.hp = 20;
+                player.x = 1;
+                player.y = 1;
             }
 
             // enemigos
             enemies.forEach(e => {
                 if (e.dead) return;
 
-                const dist = Math.abs(e.x - player.x) + Math.abs(e.y - player.y);
+                const dx = Math.abs(e.x - player.x);
+                const dy = Math.abs(e.y - player.y);
+                const dist = dx + dy;
+                const sameTile = dx === 0 && dy === 0;
 
                 if (dist <= 1 && !player.ghost && e.hurtTimer === 0) {
                     player.hp--;
@@ -235,7 +251,7 @@
                     messageTimer = 30;
                 }
 
-                if (player.attacking && dist <= 1) {
+                if (player.attacking && (dist <= 1 || sameTile)) {
                     if (e.hurtTimer === 0) {
                         e.hp--;
                         e.hurtTimer = 10;
@@ -382,7 +398,7 @@
             enemies.forEach(e => {
                 if (e.dead) return;
                 const img = e.hurtTimer > 0 ? zombieHurt : zombieIdle;
-                const scale = 1.2;
+                const scale = 1.4;
                 const size = tileSize * scale;
                 const offset = (size - tileSize) / 2;
 
@@ -402,15 +418,33 @@
                 ctx.fillText(message, canvas.width / 2, 30);
             }
 
-            // HUD
-            ctx.fillStyle = "white";
-            ctx.font = "16px Arial";
+            // HUD estilizado (lado derecho)
+            const panelWidth = 220;
+            const panelX = canvas.width - panelWidth - 10;
+            const panelY = 10;
+            const panelHeight = 110;
+
+            // fondo semi-transparente
+            ctx.fillStyle = "rgba(0,0,0,0.6)";
+            ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+
+            // borde
+            ctx.strokeStyle = "#10a37f";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
+
+            // texto
+            ctx.fillStyle = "#10a37f";
+            ctx.font = "bold 14px Arial";
             ctx.textAlign = "left";
 
-            ctx.fillText("Modo: Juego", 10, 20);
-            ctx.fillText("Zombies asesinados: " + kills, 10, 40);
-            ctx.fillText("PowerUp: " + (player.hasPower ? "SI" : "NO"), 10, 60);
-            ctx.fillText("Vida: " + player.hp, 10, 80);
+            ctx.fillText("🎮 MODO: JUEGO", panelX + 10, panelY + 25);
+            ctx.fillStyle = "white";
+            ctx.font = "13px Arial";
+
+            ctx.fillText("💀 Zombies: " + kills, panelX + 10, panelY + 50);
+            ctx.fillText("⚡ PowerUp: " + (player.hasPower ? "SI" : "NO"), panelX + 10, panelY + 70);
+            ctx.fillText("❤️ Vida: " + player.hp, panelX + 10, panelY + 90);
         }
 
         function gameLoop() {

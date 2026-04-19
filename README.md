@@ -35,7 +35,7 @@ Este enfoque combina elementos de **hardware**, **comunicación en red**, **proc
 ## CASOS DE USO
 
 UC-01: Consultar por voz (modo normal)
-(images/Caso1.png)
+![Caso de uso](images/Caso1.png)
 
 ## REQUERIMIENTOS FUNCIONALES
 
