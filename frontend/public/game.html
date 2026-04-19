@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Juego Laberinto</title>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        canvas {
+            background: #111;
+            border: 2px solid #333;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="game" width="640" height="640"></canvas>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+
+        const tileSize = 32;
+
+        const PATH_COLS = 8; // ajusta si tu sprite tiene menos columnas
+        const PATH_ROWS = 2; // solo filas de caminos (0 y 1)
+
+        // Load images
+        const wallH = new Image();
+        wallH.src = "assets/paredes/arbusto1.png"; // horizontal
+
+        const wallV = new Image();
+        wallV.src = "assets/paredes/arbustoVertical.png";
+
+        const wallSingle = new Image();
+        wallSingle.src = "assets/paredes/arbol.png";
+
+        const pathImg = new Image();
+        pathImg.src = "assets/caminosyflores.png";
+
+        const zombieIdle = new Image();
+        zombieIdle.src = "assets/zombiParado.png";
+
+        const zombieHurt = new Image();
+        zombieHurt.src = "assets/zombiHerido.png";
+
+        // Player sprites
+        const playerIdle = new Image();
+        playerIdle.src = "assets/soldado/soldadoParado.png";
+
+        const playerStep1 = new Image();
+        playerStep1.src = "assets/soldado/soldadoPaso1.png";
+
+        const playerStep2 = new Image();
+        playerStep2.src = "assets/soldado/soldadoPaso2.png";
+
+        const playerStep3 = new Image();
+        playerStep3.src = "assets/soldado/soldadoPaso3.png";
+
+        const playerSteps = [playerStep1, playerStep2, playerStep3];
+
+        const playerAtk1 = new Image(); playerAtk1.src = "assets/soldado/soldadoAtaca1.png";
+        const playerAtk2 = new Image(); playerAtk2.src = "assets/soldado/soldadoAtaca2.png";
+        const playerAtk3 = new Image(); playerAtk3.src = "assets/soldado/soldadoAtaca3.png";
+        const playerAtk4 = new Image(); playerAtk4.src = "assets/soldado/soldadoAtaca4.png";
+
+        const playerAttacks = [playerAtk1, playerAtk2, playerAtk3, playerAtk4];
+
+        // Floor tiles (32x32)
+        const piso1 = new Image(); piso1.src = "assets/pisos/piso1.png";
+        const piso2 = new Image(); piso2.src = "assets/pisos/piso2.png";
+        const piso3 = new Image(); piso3.src = "assets/pisos/piso3.png";
+        const flores1 = new Image(); flores1.src = "assets/pisos/flores1.png";
+
+        // optional big tile (128x128)
+        const pisoGrande = new Image(); pisoGrande.src = "assets/pisos/pisogrande1.png";
+
+        const powerImg = new Image();
+        powerImg.src = "assets/powerUp.png";
+
+        const waterImg = new Image();
+        waterImg.src = "assets/agua.png";
+
+        const baseFloors = [piso1, piso2, piso3];
+        const flowerTiles = [flores1];
+
+        // 0 piso, 1 pared, 2 agua, 3 powerup
+        const map = Array.from({ length: 20 }, (_, y) =>
+            Array.from({ length: 20 }, (_, x) => {
+                if (x === 0 || y === 0 || x === 19 || y === 19) return 1;
+                if (Math.random() < 0.1) return 1;
+                if (Math.random() < 0.05) return 2;
+                if (Math.random() < 0.02) return 3;
+                return 0;
+            })
+        );
+
+        const floorVariant = map.map(row =>
+            row.map(cell => (cell === 0 ? Math.floor(Math.random() * baseFloors.length) : null))
+        );
+
+        const flowerVariant = map.map(row =>
+            row.map(cell => (
+                cell === 0
+                    ? (Math.random() < 0.2 ? Math.floor(Math.random() * flowerTiles.length) : null)
+                    : null
+            ))
+        );
+
+        const bigMask = Array.from({ length: 20 }, () => Array(20).fill(false));
+
+        const goal = { x: 18, y: 18 };
+        map[goal.y][goal.x] = 0;
+
+        for (let y = 0; y < 20; y += 2) {
+            for (let x = 0; x < 20; x += 2) {
+                if (Math.random() < 0.1) {
+                    bigMask[y][x] = true;
+                    bigMask[y][x + 1] = true;
+                    bigMask[y + 1][x] = true;
+                    bigMask[y + 1][x + 1] = true;
+                }
+            }
+        }
+
+        const player = {
+            x: 1,
+            y: 1,
+            ghost: false,
+            hasPower: false,
+            attacking: false,
+            hp: 20
+        };
+
+        let stepIndex = 0;
+        let stepTimer = 0; // frames to show step animation
+
+        let lastDir = "down"; // up, down, left, right
+        let attackIndex = 0;
+        let attackTimer = 0;
+
+        let message = "";
+        let messageTimer = 0;
+
+        let kills = 0;
+
+        const enemies = [
+            { x: 7, y: 7, hurtTimer: 0, hp: 5, dead: false }
+        ];
+
+        document.addEventListener("keydown", (e) => {
+            let nx = player.x;
+            let ny = player.y;
+
+            // ataque con barra espaciadora
+            if (e.key === " ") {
+                player.attacking = true;
+                attackIndex = 0;
+                attackTimer = 15; // duración de animación
+            }
+
+            if (e.key === "ArrowUp") { ny--; lastDir = "up"; }
+            if (e.key === "ArrowDown") { ny++; lastDir = "down"; }
+            if (e.key === "ArrowLeft") { nx--; lastDir = "left"; }
+            if (e.key === "ArrowRight") { nx++; lastDir = "right"; }
+
+            if (canMove(nx, ny)) {
+                player.x = nx;
+                player.y = ny;
+                // trigger step animation
+                stepIndex = (stepIndex + 1) % playerSteps.length;
+                stepTimer = 10; // show step frames briefly
+            }
+        });
+
+        function canMove(x, y) {
+            const tile = map[y][x];
+
+            // si es fantasma puede atravesar todo
+            if (player.ghost) return true;
+
+            if (tile === 1) return false;
+            if (tile === 2) return false;
+
+            return true;
+        }
+
+        function update() {
+            // movimiento ahora es por evento (keydown)
+
+            // powerup
+            if (map[player.y][player.x] === 3) {
+                player.hasPower = true;
+
+                // convertir a piso
+                map[player.y][player.x] = 0;
+
+                // asignar variante de piso para evitar huecos/negro
+                floorVariant[player.y][player.x] = Math.floor(Math.random() * baseFloors.length);
+
+                message = "POWER UP";
+                messageTimer = 60;
+            }
+
+            // meta / victoria
+            if (player.x === goal.x && player.y === goal.y) {
+                message = "YOU WIN!";
+                messageTimer = 120;
+            }
+
+            if (player.hp <= 0) {
+                message = "GAME OVER";
+                messageTimer = 9999;
+            }
+
+            // enemigos
+            enemies.forEach(e => {
+                if (e.dead) return;
+
+                const dist = Math.abs(e.x - player.x) + Math.abs(e.y - player.y);
+
+                if (dist <= 1 && !player.ghost && e.hurtTimer === 0) {
+                    player.hp--;
+                    e.hurtTimer = 40; // más lento
+                    message = "HIT!";
+                    messageTimer = 30;
+                }
+
+                if (player.attacking && dist <= 1) {
+                    if (e.hurtTimer === 0) {
+                        e.hp--;
+                        e.hurtTimer = 10;
+
+                        if (e.hp <= 0) {
+                            e.dead = true;
+                            kills++;
+                        }
+                    }
+                }
+
+                if (e.hurtTimer > 0) e.hurtTimer--;
+            });
+
+            if (stepTimer > 0) stepTimer--;
+            if (attackTimer > 0) {
+                attackTimer--;
+                if (attackTimer % 3 === 0) {
+                    attackIndex = (attackIndex + 1) % playerAttacks.length;
+                }
+            } else {
+                player.attacking = false;
+            }
+            if (messageTimer > 0) messageTimer--;
+        }
+
+        function drawTile(x, y, type) {
+            if (type === 1) {
+                const up = map[y - 1]?.[x] === 1;
+                const down = map[y + 1]?.[x] === 1;
+                const left = map[y]?.[x - 1] === 1;
+                const right = map[y]?.[x + 1] === 1;
+
+                let img = wallSingle;
+
+                // horizontal
+                if (left || right) img = wallH;
+
+                // vertical
+                if (up || down) img = wallV;
+
+                // solo (sin vecinos)
+                if (!up && !down && !left && !right) img = wallSingle;
+
+                ctx.drawImage(img, x * tileSize, y * tileSize, tileSize, tileSize);
+                return;
+            }
+
+            if (type === 0) {
+                // draw base floor ALWAYS first
+                let idx = floorVariant[y][x];
+                if (idx === null || idx === undefined) {
+                    idx = Math.floor(Math.random() * baseFloors.length);
+                    floorVariant[y][x] = idx;
+                }
+                const base = baseFloors[idx];
+                ctx.drawImage(base, x * tileSize, y * tileSize, tileSize, tileSize);
+
+                // big tile overlay (only top-left draws full image)
+                if (bigMask[y][x] && x % 2 === 0 && y % 2 === 0) {
+                    ctx.drawImage(pisoGrande, x * tileSize, y * tileSize, tileSize * 2, tileSize * 2);
+                }
+
+                // overlay flowers SOLO en piso válido (ej: pasto) y NO en tiles grandes
+                const isGrass = (idx === 0 || idx === 1); // ajusta según tus pisos
+
+                if (!bigMask[y][x] && isGrass) {
+                    const flowerIdx = flowerVariant[y][x];
+                    if (flowerIdx !== null && flowerIdx !== undefined) {
+                        const flower = flowerTiles[flowerIdx];
+                        ctx.drawImage(flower, x * tileSize, y * tileSize, tileSize, tileSize);
+                    }
+                }
+
+                return;
+            }
+
+            if (type === 2) {
+                // dibuja piso base debajo
+                let idx = floorVariant[y][x];
+                if (idx === null || idx === undefined) {
+                    idx = Math.floor(Math.random() * baseFloors.length);
+                    floorVariant[y][x] = idx;
+                }
+                const base = baseFloors[idx];
+                ctx.drawImage(base, x * tileSize, y * tileSize, tileSize, tileSize);
+
+                // dibuja agua encima
+                ctx.drawImage(waterImg, x * tileSize, y * tileSize, tileSize, tileSize);
+                return;
+            }
+
+            if (type === 3) {
+                // siempre dibuja piso debajo
+                let idx = floorVariant[y][x];
+                if (idx === null || idx === undefined) {
+                    idx = Math.floor(Math.random() * baseFloors.length);
+                    floorVariant[y][x] = idx;
+                }
+                const base = baseFloors[idx];
+                ctx.drawImage(base, x * tileSize, y * tileSize, tileSize, tileSize);
+
+                // dibuja powerup encima
+                ctx.drawImage(powerImg, x * tileSize, y * tileSize, tileSize, tileSize);
+                return;
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let y = 0; y < map.length; y++) {
+                for (let x = 0; x < map[y].length; x++) {
+                    drawTile(x, y, map[y][x]);
+                }
+            }
+
+            // meta
+            ctx.fillStyle = "gold";
+            ctx.fillRect(goal.x * tileSize, goal.y * tileSize, tileSize, tileSize);
+
+            // jugador
+            ctx.globalAlpha = player.ghost ? 0.5 : 1;
+
+            let img = playerIdle;
+
+            if (player.attacking) {
+                img = playerAttacks[attackIndex];
+            } else if (stepTimer > 0) {
+                img = playerSteps[stepIndex];
+            }
+
+            ctx.drawImage(
+                img,
+                player.x * tileSize,
+                player.y * tileSize,
+                tileSize,
+                tileSize
+            );
+
+            ctx.globalAlpha = 1;
+
+            // enemigos
+            enemies.forEach(e => {
+                if (e.dead) return;
+                const img = e.hurtTimer > 0 ? zombieHurt : zombieIdle;
+                const scale = 1.2;
+                const size = tileSize * scale;
+                const offset = (size - tileSize) / 2;
+
+                ctx.drawImage(
+                    img,
+                    e.x * tileSize - offset,
+                    e.y * tileSize - offset,
+                    size,
+                    size
+                );
+            });
+
+            if (messageTimer > 0) {
+                ctx.fillStyle = "white";
+                ctx.font = "20px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(message, canvas.width / 2, 30);
+            }
+
+            // HUD
+            ctx.fillStyle = "white";
+            ctx.font = "16px Arial";
+            ctx.textAlign = "left";
+
+            ctx.fillText("Modo: Juego", 10, 20);
+            ctx.fillText("Zombies asesinados: " + kills, 10, 40);
+            ctx.fillText("PowerUp: " + (player.hasPower ? "SI" : "NO"), 10, 60);
+            ctx.fillText("Vida: " + player.hp, 10, 80);
+        }
+
+        function gameLoop() {
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+
+        // ================= SOCKET.IO =================
+        const socket = io("http://192.168.100.3:5001", {
+            transports: ["websocket"]
+        });
+
+        socket.on("connect", () => {
+            console.log("🎮 Juego conectado al backend");
+        });
+
+        // 🔥 aquí recibes comandos del backend
+        socket.on("accion", (data) => {
+            try {
+                const action = data.action;
+
+                if (action === "jump") {
+                    player.y -= 1;
+                }
+
+                if (action === "ghost" && player.hasPower) {
+                    player.ghost = true;
+                    player.hasPower = false;
+
+                    setTimeout(() => {
+                        player.ghost = false;
+                    }, 10000);
+                }
+
+                if (action === "attack") {
+                    player.attacking = true;
+                    attackIndex = 0;
+                    attackTimer = 180; // 3 segundos (60fps)
+                }
+
+            } catch (e) {
+                console.log("Socket error", e);
+            }
+        });
+    </script>
+</body>
+
+</html>

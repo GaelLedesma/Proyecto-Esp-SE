@@ -37,6 +37,24 @@ Este enfoque combina elementos de **hardware**, **comunicación en red**, **proc
 UC-01: Consultar por voz (modo normal)
 (images/Caso1.png)
 
+## REQUERIMIENTOS FUNCIONALES
+
+| ID    | Requerimiento               | Descripción                                                         |
+| ----- | --------------------------- | ------------------------------------------------------------------- |
+| RF-01 | Captura de audio            | El ESP32 debe capturar la voz del usuario mediante un micrófono I2S |
+| RF-02 | Envío de audio              | El ESP32 debe enviar el audio al backend para su procesamiento      |
+| RF-03 | Transcripción               | El sistema debe convertir el audio a texto utilizando Whisper       |
+| RF-04 | Procesamiento IA            | El backend debe generar una respuesta usando un modelo de IA        |
+| RF-05 | Generación de audio         | El sistema debe convertir la respuesta en texto a audio             |
+| RF-06 | Reproducción de audio       | El ESP32 debe reproducir la respuesta en una bocina                 |
+| RF-07 | Visualización               | El sistema debe mostrar información en el display LED               |
+| RF-08 | Control por botones         | El usuario debe poder interactuar mediante botones físicos          |
+| RF-09 | Modo conocimiento           | El sistema debe responder usando una base de conocimiento           |
+| RF-10 | Comunicación en tiempo real | El backend debe enviar respuestas mediante WebSockets               |
+| RF-11 | Modo juego                  | El sistema debe permitir activar un modo de juego mediante voz      |
+| RF-12 | Contexto conversacional     | El sistema debe mantener historial para mejorar respuestas          |
+| RF-13 | Cancelación de reproducción | El usuario debe poder detener la reproducción de audio              |
+
 ## Carpeta `esp32`
 
 La carpeta `esp32` contiene la parte correspondiente al firmware del dispositivo. Aquí se encuentra el código necesario para que el ESP32 controle el micrófono, la bocina, el display y los botones físicos, además de la comunicación básica con el sistema externo.

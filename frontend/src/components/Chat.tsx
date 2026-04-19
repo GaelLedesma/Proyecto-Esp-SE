@@ -25,6 +25,7 @@ export default function Chat() {
   const [typingMessage, setTypingMessage] = useState<ChatMessage | null>(null);
   const [displayedText, setDisplayedText] = useState("");
   const [chatColor, setChatColor] = useState("#10a37f");
+  const [showGame, setShowGame] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -102,8 +103,14 @@ export default function Chat() {
       setTypingMessage(data);
     });
 
+    socket.on("modo_juego", (data: any) => {
+      if (data.action === "open") setShowGame(true);
+      if (data.action === "close") setShowGame(false);
+    });
+
     return () => {
       socket.off("respuesta");
+      socket.off("modo_juego");
     };
   }, [currentId]);
 
@@ -270,6 +277,52 @@ export default function Chat() {
           <div ref={bottomRef} />
         </div>
       </div>
+      {showGame && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.9)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+          }}
+        >
+          <button
+            onClick={() => setShowGame(false)}
+            style={{
+              position: "absolute",
+              top: 20,
+              right: 20,
+              background: "red",
+              color: "white",
+              border: "none",
+              borderRadius: "50%",
+              width: 40,
+              height: 40,
+              fontSize: 18,
+              cursor: "pointer",
+            }}
+          >
+            ✕
+          </button>
+
+          <iframe
+            src="/game.html"
+            style={{
+              width: "80%",
+              height: "80%",
+              borderRadius: "12px",
+              border: "none",
+              background: "#000",
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

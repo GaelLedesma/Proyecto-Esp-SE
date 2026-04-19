@@ -33,6 +33,7 @@ modo_kb = False
 ultima_respuesta = ""
 contexto_historial = []
 modo_contexto = False
+modo_juego = False
 
 
 # ================= KB =================
@@ -261,6 +262,29 @@ def procesar():
     user_text = result["text"]
     user_text_lower = user_text.lower()
 
+    # ===== ACCIONES JUEGO (fuzzy / variantes) =====
+    # palabras clave por acción (usa raíces para cubrir variantes: salta, saltar, saltó, etc.)
+    acciones_keywords = {
+        "jump": ["salt", "brinc"],           # saltar, salta, salto, brinca
+        "ghost": ["fantasm", "invis", "fontasm"],     # fantasma, fantasmal, invisible
+        "attack": ["golpe", "atac", "pega"]  # golpear, golpea, atacar, pega
+    }
+
+    def contiene_variacion(texto, keywords):
+        return any(kw in texto for kw in keywords)
+
+    if contiene_variacion(user_text_lower, acciones_keywords["jump"]):
+        socketio.emit("accion", {"action": "jump"})
+        return responder_kb(user_text, "Saltando")
+
+    if contiene_variacion(user_text_lower, acciones_keywords["ghost"]):
+        socketio.emit("accion", {"action": "ghost"})
+        return responder_kb(user_text, "Modo fantasma activado")
+
+    if contiene_variacion(user_text_lower, acciones_keywords["attack"]):
+        socketio.emit("accion", {"action": "attack"})
+        return responder_kb(user_text, "Atacando")
+
     # ===== COLORES =====
     for color, hex_val in colores_css.items():
         if color in user_text_lower:
@@ -285,15 +309,43 @@ def procesar():
                 "audio_url": ""
             }
 
+    def contiene_frase_variada(texto, keywords):
+        return any(kw in texto for kw in keywords)
+
     # ===== KB =====
-    global modo_kb
+    global modo_kb, modo_juego
+
+    kb_keywords = ["conoc", "sab", "dato"]
+    modo_keywords = ["modo", "mundo"]
 
     if not modo_kb:
-        if "modo conocimiento" in user_text_lower:
+        if contiene_frase_variada(user_text_lower, kb_keywords) and contiene_frase_variada(user_text_lower, modo_keywords):
             modo_kb = True
             return responder_kb(user_text, "Modo base de conocimiento activado. Di dos personajes.")
 
+    # ===== MODO JUEGO =====
+    juego_keywords = ["jueg", "jug", "cuev", "cuerv", "pueblo", "huevo"]
+
+    if not modo_juego:
+        if contiene_frase_variada(user_text_lower, juego_keywords):
+            modo_juego = True
+
+            socketio.emit("modo_juego", {
+                "action": "open"
+            })
+
+            return responder_kb(user_text, "Modo juego activado")
+
     if "salir" in user_text_lower:
+        if modo_juego:
+            modo_juego = False
+
+            socketio.emit("modo_juego", {
+                "action": "close"
+            })
+
+            return responder_kb(user_text, "Cerrando juego")
+
         modo_kb = False
         return responder_kb(user_text, "Saliendo del modo conocimiento")
 
