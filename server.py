@@ -263,19 +263,19 @@ def procesar():
     user_text_lower = user_text.lower()
 
     # ===== ACCIONES JUEGO (fuzzy / variantes) =====
-    # palabras clave por acción (usa raíces para cubrir variantes: salta, saltar, saltó, etc.)
+    # palabras clave por acción (usa raíces para cubrir variantes)
     acciones_keywords = {
-        "jump": ["salt", "brinc"],           # saltar, salta, salto, brinca
-        "ghost": ["fantasm", "invis", "fontasm"],     # fantasma, fantasmal, invisible
-        "attack": ["golpe", "atac", "pega"]  # golpear, golpea, atacar, pega
+        "chaos": ["caos", "kaos", "caoss", "kaoss", "caus","kaus","daus"],
+        "ghost": ["fantasm", "invis", "fontasm"],
+        "attack": ["golpe", "atac", "pega"]
     }
 
     def contiene_variacion(texto, keywords):
         return any(kw in texto for kw in keywords)
 
-    if contiene_variacion(user_text_lower, acciones_keywords["jump"]):
-        socketio.emit("accion", {"action": "jump"})
-        return responder_kb(user_text, "Saltando")
+    if contiene_variacion(user_text_lower, acciones_keywords["chaos"]):
+        socketio.emit("accion", {"action": "chaos"})
+        return responder_kb(user_text, "Modo caos activado")
 
     if contiene_variacion(user_text_lower, acciones_keywords["ghost"]):
         socketio.emit("accion", {"action": "ghost"})
@@ -321,6 +321,11 @@ def procesar():
     if not modo_kb:
         if contiene_frase_variada(user_text_lower, kb_keywords) and contiene_frase_variada(user_text_lower, modo_keywords):
             modo_kb = True
+
+            socketio.emit("modo_kb", {
+                "action": "open"
+            })
+
             return responder_kb(user_text, "Modo base de conocimiento activado. Di dos personajes.")
 
     # ===== MODO JUEGO =====
@@ -336,7 +341,9 @@ def procesar():
 
             return responder_kb(user_text, "Modo juego activado")
 
-    if "salir" in user_text_lower:
+    salir_keywords = ["salir", "sali", "sal", "salte", "salte", "sir", "sar", "zalir", "talir"]
+
+    if contiene_frase_variada(user_text_lower, salir_keywords):
         if modo_juego:
             modo_juego = False
 
@@ -347,6 +354,11 @@ def procesar():
             return responder_kb(user_text, "Cerrando juego")
 
         modo_kb = False
+
+        socketio.emit("modo_kb", {
+            "action": "close"
+        })
+
         return responder_kb(user_text, "Saliendo del modo conocimiento")
 
     if modo_kb:
@@ -357,6 +369,13 @@ def procesar():
 
         if match:
             p1, p2, rel = match
+
+            socketio.emit("relacion_kb", {
+                "p1": p1,
+                "p2": p2,
+                "rel": rel
+            })
+
             return responder_kb(user_text, f"{p1} y {p2}: {rel}")
         else:
             entidades = set([e for par in kb.keys() for e in par])

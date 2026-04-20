@@ -26,6 +26,8 @@ export default function Chat() {
   const [displayedText, setDisplayedText] = useState("");
   const [chatColor, setChatColor] = useState("#10a37f");
   const [showGame, setShowGame] = useState(false);
+  const [showKB, setShowKB] = useState(false);
+  const [kbData, setKbData] = useState<any>(null);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -108,9 +110,21 @@ export default function Chat() {
       if (data.action === "close") setShowGame(false);
     });
 
+    socket.on("relacion_kb", (data: any) => {
+      setKbData(data);
+      setShowKB(true);
+    });
+
+    socket.on("modo_kb", (data: any) => {
+      if (data.action === "open") setShowKB(true);
+      if (data.action === "close") setShowKB(false);
+    });
+
     return () => {
       socket.off("respuesta");
       socket.off("modo_juego");
+      socket.off("relacion_kb");
+      socket.off("modo_kb");
     };
   }, [currentId]);
 
@@ -319,6 +333,52 @@ export default function Chat() {
               borderRadius: "12px",
               border: "none",
               background: "#000",
+            }}
+          />
+        </div>
+      )}
+      {showKB && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "transparent",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+          }}
+        >
+          <button
+            onClick={() => setShowKB(false)}
+            style={{
+              position: "absolute",
+              top: 20,
+              right: 20,
+              background: "red",
+              color: "white",
+              border: "none",
+              borderRadius: "50%",
+              width: 40,
+              height: 40,
+              fontSize: 18,
+              cursor: "pointer",
+            }}
+          >
+            ✕
+          </button>
+
+          <iframe
+            src="/kb.html"
+            style={{
+              width: "80%",
+              height: "80%",
+              borderRadius: "12px",
+              border: "none",
+              background: "transparent",
             }}
           />
         </div>

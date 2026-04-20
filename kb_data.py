@@ -74,10 +74,18 @@ equivalentes = {
     "esneip": "snape",
     "sneip": "snape",
     "Snape": "snape",
+    "nape": "snape",
+    "neip": "snape",
 
     # hagrid
     "jagrid": "hagrid",
     "agrid": "hagrid",
+
+    # lily
+    "lili": "lily",
+    "lilyy": "lily",
+    "lilly": "lily",
+    "lilii": "lily",
 
     # draco
     "drako": "draco",

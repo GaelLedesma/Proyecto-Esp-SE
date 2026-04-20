@@ -168,6 +168,10 @@
 
         const enemies = [];
 
+        // CHAOS MODE
+        let chaosMode = false;
+        let chaosTimer = 0;
+
         function generateLevel() {
             // generar mapa
             for (let y = 0; y < 20; y++) {
@@ -352,6 +356,25 @@
                 player.attacking = false;
             }
             if (messageTimer > 0) messageTimer--;
+
+            // CHAOS MODE
+            if (chaosTimer > 0) {
+                chaosTimer--;
+
+                // spawn extra zombies gradually
+                if (chaosTimer % 30 === 0) {
+                    let x, y;
+                    do {
+                        x = Math.floor(Math.random() * 20);
+                        y = Math.floor(Math.random() * 20);
+                    } while (map[y][x] !== 0);
+
+                    enemies.push({ x, y, hurtTimer: 0, attackCooldown: 0, hp: 3, dead: false });
+                }
+
+            } else {
+                chaosMode = false;
+            }
         }
 
         function drawTile(x, y, type) {
@@ -441,6 +464,15 @@
             // eliminar fondo residual
             ctx.globalAlpha = 1;
 
+            ctx.save();
+
+            // screen shake
+            if (chaosMode) {
+                const shakeX = (Math.random() - 0.5) * 10;
+                const shakeY = (Math.random() - 0.5) * 10;
+                ctx.translate(shakeX, shakeY);
+            }
+
             for (let y = 0; y < map.length; y++) {
                 for (let x = 0; x < map[y].length; x++) {
                     drawTile(x, y, map[y][x]);
@@ -525,6 +557,14 @@
             ctx.fillText("Power: " + (player.hasPower ? "ON" : "OFF"), panelX + 10, panelY + 70);
             ctx.fillText("Vida: " + player.hp, panelX + 10, panelY + 90);
             ctx.fillText("Nivel: " + level, panelX + 10, panelY + 110);
+
+            // overlay rojo
+            if (chaosMode) {
+                ctx.fillStyle = "rgba(255,0,0,0.2)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            ctx.restore();
         }
 
         function gameLoop() {
@@ -566,6 +606,13 @@
                     player.attacking = true;
                     attackIndex = 0;
                     attackTimer = 180; // 3 segundos (60fps)
+                }
+
+                if (action === "chaos") {
+                    chaosMode = true;
+                    chaosTimer = 300; // ~5 segundos
+                    message = "CAOS ACTIVADO";
+                    messageTimer = 60;
                 }
 
             } catch (e) {

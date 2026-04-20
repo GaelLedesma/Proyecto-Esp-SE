@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>KB Visual</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #111;
+            color: white;
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="kbCanvas"></canvas>
+
+    <script>
+        const socket = io("http://192.168.100.3:5001");
+
+        const canvas = document.getElementById("kbCanvas");
+        const ctx = canvas.getContext("2d");
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        // ---- Graph state ----
+        const nodes = new Map(); // id -> {id,x,y,vx,vy}
+        const edges = []; // {a,b,label}
+
+        function getOrCreateNode(id) {
+            if (!nodes.has(id)) {
+                nodes.set(id, {
+                    id,
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: 0,
+                    vy: 0
+                });
+            }
+            return nodes.get(id);
+        }
+
+        function addRelation(rel) {
+            const n1 = getOrCreateNode(rel.p1);
+            const n2 = getOrCreateNode(rel.p2);
+
+            // avoid duplicate edges
+            const exists = edges.some(e =>
+                (e.a === n1.id && e.b === n2.id && e.label === rel.rel) ||
+                (e.a === n2.id && e.b === n1.id && e.label === rel.rel)
+            );
+            if (!exists) edges.push({ a: n1.id, b: n2.id, label: rel.rel });
+        }
+
+        socket.on("relacion_kb", (data) => {
+            addRelation(data);
+        });
+
+        // ---- Simple force layout ----
+        const REPULSION = 1200;
+        const SPRING = 0.01;
+        const DAMPING = 0.85;
+        const EDGE_LENGTH = 180;
+
+        function stepPhysics() {
+            // repulsion
+            const arr = Array.from(nodes.values());
+            for (let i = 0; i < arr.length; i++) {
+                for (let j = i + 1; j < arr.length; j++) {
+                    const a = arr[i];
+                    const b = arr[j];
+                    let dx = b.x - a.x;
+                    let dy = b.y - a.y;
+                    let dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
+                    const force = REPULSION / (dist * dist);
+                    const fx = (dx / dist) * force;
+                    const fy = (dy / dist) * force;
+                    a.vx -= fx; a.vy -= fy;
+                    b.vx += fx; b.vy += fy;
+                }
+            }
+
+            // springs (edges)
+            for (const e of edges) {
+                const a = nodes.get(e.a);
+                const b = nodes.get(e.b);
+                let dx = b.x - a.x;
+                let dy = b.y - a.y;
+                let dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
+                const diff = dist - EDGE_LENGTH;
+                const fx = (dx / dist) * diff * SPRING;
+                const fy = (dy / dist) * diff * SPRING;
+                a.vx += fx; a.vy += fy;
+                b.vx -= fx; b.vy -= fy;
+            }
+
+            // integrate
+            for (const n of nodes.values()) {
+                n.vx *= DAMPING;
+                n.vy *= DAMPING;
+                n.x += n.vx;
+                n.y += n.vy;
+
+                // bounds
+                n.x = Math.max(40, Math.min(canvas.width - 40, n.x));
+                n.y = Math.max(40, Math.min(canvas.height - 40, n.y));
+            }
+        }
+
+        // ---- Draw ----
+        function drawNode(n) {
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, 28, 0, Math.PI * 2);
+            ctx.fillStyle = "#10a37f";
+            ctx.fill();
+
+            ctx.fillStyle = "#fff";
+            ctx.font = "12px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(n.id, n.x, n.y + 4);
+        }
+
+        function drawEdge(e) {
+            const a = nodes.get(e.a);
+            const b = nodes.get(e.b);
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(a.x, a.y);
+            ctx.lineTo(b.x, b.y);
+            ctx.stroke();
+
+            // label
+            const midX = (a.x + b.x) / 2;
+            const midY = (a.y + b.y) / 2;
+            ctx.fillStyle = "#ffeb3b";
+            ctx.font = "12px sans-serif";
+            ctx.fillText(e.label, midX, midY - 6);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // edges first
+            edges.forEach(drawEdge);
+
+            // nodes on top
+            nodes.forEach(drawNode);
+        }
+
+        function loop() {
+            stepPhysics();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+    </script>
+</body>
+
+</html>
