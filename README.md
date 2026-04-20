@@ -37,6 +37,19 @@ Este enfoque combina elementos de **hardware**, **comunicación en red**, **proc
 UC-01: Consultar por voz (modo normal)
 ![Caso de uso](images/Caso1.png)
 
+UC-02: Consultar por voz (modo contexto)
+![Caso de uso](images/Caso2.png)
+UC-03: Activar modo conocimiento
+![Caso de uso](images/Caso3.png)
+UC-04: Activar modo juego
+![Caso de uso](images/Caso4.png)
+UC-05: Controlar juego por voz
+![Caso de uso](images/Caso5.png)
+UC-06: Activar modo fantasma
+![Caso de uso](images/Caso6.png)
+UC-07: Reproducir respuesta en audio
+![Caso de uso](images/Caso7.png)
+
 ## REQUERIMIENTOS FUNCIONALES
 
 | ID    | Requerimiento               | Descripción                                                         |

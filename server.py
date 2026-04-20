@@ -316,7 +316,7 @@ def procesar():
     global modo_kb, modo_juego
 
     kb_keywords = ["conoc", "sab", "dato"]
-    modo_keywords = ["modo", "mundo"]
+    modo_keywords = ["modo", "mundo", "mono", "madre"]
 
     if not modo_kb:
         if contiene_frase_variada(user_text_lower, kb_keywords) and contiene_frase_variada(user_text_lower, modo_keywords):

@@ -7,7 +7,7 @@
     <style>
         body {
             margin: 0;
-            background: #000;
+            background: transparent;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -15,8 +15,9 @@
         }
 
         canvas {
-            background: #111;
-            border: 2px solid #333;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
         }
     </style>
 </head>
@@ -108,6 +109,17 @@
             row.map(cell => (cell === 0 ? Math.floor(Math.random() * baseFloors.length) : null))
         );
 
+        // evitar agua en zonas de piso decorado o conflicto
+        for (let y = 0; y < 20; y++) {
+            for (let x = 0; x < 20; x++) {
+                if (map[y][x] === 2) {
+                    if (floorVariant[y][x] !== null) {
+                        map[y][x] = 0;
+                    }
+                }
+            }
+        }
+
         const flowerVariant = map.map(row =>
             row.map(cell => (
                 cell === 0
@@ -152,18 +164,66 @@
         let messageTimer = 0;
 
         let kills = 0;
+        let level = 1;
 
         const enemies = [];
 
-        // generar zombie en posición válida
+        function generateLevel() {
+            // generar mapa
+            for (let y = 0; y < 20; y++) {
+                for (let x = 0; x < 20; x++) {
+                    if (x === 0 || y === 0 || x === 19 || y === 19) map[y][x] = 1;
+                    else if (Math.random() < 0.1) map[y][x] = 1;
+                    else if (Math.random() < 0.05) map[y][x] = 2;
+                    else if (Math.random() < 0.02) map[y][x] = 3;
+                    else map[y][x] = 0;
+                }
+            }
+
+            // reset floorVariant
+            for (let y = 0; y < 20; y++) {
+                for (let x = 0; x < 20; x++) {
+                    floorVariant[y][x] = map[y][x] === 0
+                        ? Math.floor(Math.random() * baseFloors.length)
+                        : null;
+                }
+            }
+
+            // limpiar enemigos
+            enemies.length = 0;
+
+            // más enemigos por nivel
+            const enemyCount = level + 1;
+
+            // HP según nivel
+            let enemyHP = 4;
+            if (level === 2) enemyHP = 6;
+            if (level >= 3) enemyHP = 8;
+
+            for (let i = 0; i < enemyCount; i++) {
+                let x, y;
+                do {
+                    x = Math.floor(Math.random() * 20);
+                    y = Math.floor(Math.random() * 20);
+                } while (map[y][x] !== 0);
+
+                enemies.push({ x, y, hurtTimer: 0, attackCooldown: 0, hp: enemyHP, dead: false });
+            }
+
+            // reset player
+            player.x = 1;
+            player.y = 1;
+        }
+
+        // generar zombie en posición válida para el primer nivel
         for (let i = 0; i < 1; i++) {
             let x, y;
             do {
                 x = Math.floor(Math.random() * 20);
                 y = Math.floor(Math.random() * 20);
             } while (map[y][x] !== 0);
-
-            enemies.push({ x, y, hurtTimer: 0, hp: 5, dead: false });
+            let enemyHP = 4;
+            enemies.push({ x, y, hurtTimer: 0, attackCooldown: 0, hp: enemyHP, dead: false });
         }
 
         document.addEventListener("keydown", (e) => {
@@ -222,8 +282,14 @@
 
             // meta / victoria
             if (player.x === goal.x && player.y === goal.y) {
-                message = "YOU WIN!";
-                messageTimer = 120;
+                if (level < 3) {
+                    level++;
+                    message = "LEVEL " + level;
+                    generateLevel();
+                } else {
+                    message = "WIN GAME";
+                }
+                messageTimer = 60;
             }
 
             if (player.hp <= 0) {
@@ -241,29 +307,39 @@
 
                 const dx = Math.abs(e.x - player.x);
                 const dy = Math.abs(e.y - player.y);
-                const dist = dx + dy;
-                const sameTile = dx === 0 && dy === 0;
+                // rango correcto: mismo tile o cualquiera de los 8 vecinos
+                const inRange = (dx <= 1 && dy <= 1);
 
-                if (dist <= 1 && !player.ghost && e.hurtTimer === 0) {
+                const dist = dx + dy;
+                if (dist <= 1 && !player.ghost && e.attackCooldown <= 0) {
                     player.hp--;
-                    e.hurtTimer = 40; // más lento
+                    e.attackCooldown = 40; // más lento
                     message = "HIT!";
                     messageTimer = 30;
                 }
 
-                if (player.attacking && (dist <= 1 || sameTile)) {
-                    if (e.hurtTimer === 0) {
+                if (player.attacking && inRange) {
+                    // hurtTimer solo controla animación de herido, no el ataque del zombie
+                    if (e.hurtTimer <= 0) {
                         e.hp--;
-                        e.hurtTimer = 10;
+                        e.hurtTimer = 8;
+
+                        console.log("hit zombie -> hp:", e.hp, "dx:", dx, "dy:", dy);
 
                         if (e.hp <= 0) {
                             e.dead = true;
                             kills++;
+                            console.log("zombie muerto");
                         }
                     }
                 }
 
-                if (e.hurtTimer > 0) e.hurtTimer--;
+                if (e.hurtTimer > 0) {
+                    e.hurtTimer--;
+                }
+                if (e.attackCooldown > 0) {
+                    e.attackCooldown--;
+                }
             });
 
             if (stepTimer > 0) stepTimer--;
@@ -339,8 +415,8 @@
                 const base = baseFloors[idx];
                 ctx.drawImage(base, x * tileSize, y * tileSize, tileSize, tileSize);
 
-                // dibuja agua encima
-                ctx.drawImage(waterImg, x * tileSize, y * tileSize, tileSize, tileSize);
+                // dibuja agua encima (32x32 explícito)
+                ctx.drawImage(waterImg, x * tileSize, y * tileSize, 32, 32);
                 return;
             }
 
@@ -362,6 +438,8 @@
 
         function render() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // eliminar fondo residual
+            ctx.globalAlpha = 1;
 
             for (let y = 0; y < map.length; y++) {
                 for (let x = 0; x < map[y].length; x++) {
@@ -377,21 +455,26 @@
             ctx.globalAlpha = player.ghost ? 0.5 : 1;
 
             let img = playerIdle;
-
             if (player.attacking) {
                 img = playerAttacks[attackIndex];
             } else if (stepTimer > 0) {
                 img = playerSteps[stepIndex];
             }
 
-            ctx.drawImage(
-                img,
-                player.x * tileSize,
-                player.y * tileSize,
-                tileSize,
-                tileSize
-            );
+            const px = player.x * tileSize;
+            const py = player.y * tileSize;
 
+            ctx.save();
+
+            if (lastDir === "left") {
+                ctx.translate(px + tileSize, py);
+                ctx.scale(-1, 1);
+                ctx.drawImage(img, 0, 0, tileSize, tileSize);
+            } else {
+                ctx.drawImage(img, px, py, tileSize, tileSize);
+            }
+
+            ctx.restore();
             ctx.globalAlpha = 1;
 
             // enemigos
@@ -418,33 +501,30 @@
                 ctx.fillText(message, canvas.width / 2, 30);
             }
 
-            // HUD estilizado (lado derecho)
+            // HUD estilizado PRO
             const panelWidth = 220;
             const panelX = canvas.width - panelWidth - 10;
             const panelY = 10;
             const panelHeight = 110;
 
-            // fondo semi-transparente
-            ctx.fillStyle = "rgba(0,0,0,0.6)";
+            const grad = ctx.createLinearGradient(panelX, panelY, panelX, panelY + panelHeight);
+            grad.addColorStop(0, "rgba(16,163,127,0.25)");
+            grad.addColorStop(1, "rgba(0,0,0,0.05)");
+            ctx.fillStyle = grad;
             ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
 
-            // borde
-            ctx.strokeStyle = "#10a37f";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
+            // sin borde (más limpio)
 
-            // texto
             ctx.fillStyle = "#10a37f";
-            ctx.font = "bold 14px Arial";
-            ctx.textAlign = "left";
+            ctx.font = "bold 16px monospace";
+            ctx.fillText("MODO JUEGO", panelX + 10, panelY + 22);
 
-            ctx.fillText("🎮 MODO: JUEGO", panelX + 10, panelY + 25);
             ctx.fillStyle = "white";
-            ctx.font = "13px Arial";
-
-            ctx.fillText("💀 Zombies: " + kills, panelX + 10, panelY + 50);
-            ctx.fillText("⚡ PowerUp: " + (player.hasPower ? "SI" : "NO"), panelX + 10, panelY + 70);
-            ctx.fillText("❤️ Vida: " + player.hp, panelX + 10, panelY + 90);
+            ctx.font = "14px monospace";
+            ctx.fillText("Zombies: " + kills, panelX + 10, panelY + 50);
+            ctx.fillText("Power: " + (player.hasPower ? "ON" : "OFF"), panelX + 10, panelY + 70);
+            ctx.fillText("Vida: " + player.hp, panelX + 10, panelY + 90);
+            ctx.fillText("Nivel: " + level, panelX + 10, panelY + 110);
         }
 
         function gameLoop() {
