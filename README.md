@@ -49,6 +49,12 @@ UC-06: Activar modo fantasma
 ![Caso de uso](images/Caso6.png)
 UC-07: Reproducir respuesta en audio
 ![Caso de uso](images/Caso7.png)
+UC-08: Salir / cerrar modo
+![Caso de uso](images/Caso8.png)
+UC-09: Manejar error de reconocimiento
+![Caso de uso](images/Caso9.png)
+UC-10: Visualizar información (KB)
+![Caso de uso](images/Caso10.png)
 
 ## REQUERIMIENTOS FUNCIONALES
 

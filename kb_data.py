@@ -69,6 +69,7 @@ equivalentes = {
 
     # sirius
     "siriu": "sirius",
+    "serius": "sirius",
 
     # snape
     "esneip": "snape",

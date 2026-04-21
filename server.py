@@ -11,6 +11,11 @@ import os
 import time
 from pathlib import Path
 from collections import deque
+import re
+
+# ================= Tokenization utility =================
+def tokenizar(texto: str):
+    return re.findall(r"\b[\wáéíóúñ]+\b", texto.lower())
 
 from constants import *
 from kb_data import kb_base, equivalentes, system_prompt
@@ -267,11 +272,29 @@ def procesar():
     acciones_keywords = {
         "chaos": ["caos", "kaos", "caoss", "kaoss", "caus","kaus","daus"],
         "ghost": ["fantasm", "invis", "fontasm"],
-        "attack": ["golpe", "atac", "pega"]
+        "attack": ["golpe", "atac", "atacar", "ataque", "pega"]
     }
 
     def contiene_variacion(texto, keywords):
-        return any(kw in texto for kw in keywords)
+        tokens = tokenizar(texto)
+
+        # exact match
+        if any(tok in keywords for tok in tokens):
+            return True
+
+        # prefix match (clave)
+        for tok in tokens:
+            for kw in keywords:
+                if tok.startswith(kw) or kw.startswith(tok):
+                    return True
+
+        # fuzzy
+        for tok in tokens:
+            match = get_close_matches(tok, keywords, n=1, cutoff=0.85)
+            if match:
+                return True
+
+        return False
 
     if contiene_variacion(user_text_lower, acciones_keywords["chaos"]):
         socketio.emit("accion", {"action": "chaos"})
@@ -310,12 +333,30 @@ def procesar():
             }
 
     def contiene_frase_variada(texto, keywords):
-        return any(kw in texto for kw in keywords)
+        tokens = tokenizar(texto)
+
+        # exact match
+        if any(tok in keywords for tok in tokens):
+            return True
+
+        # prefix match (clave)
+        for tok in tokens:
+            for kw in keywords:
+                if tok.startswith(kw) or kw.startswith(tok):
+                    return True
+
+        # fuzzy
+        for tok in tokens:
+            match = get_close_matches(tok, keywords, n=1, cutoff=0.85)
+            if match:
+                return True
+
+        return False
 
     # ===== KB =====
     global modo_kb, modo_juego
 
-    kb_keywords = ["conoc", "sab", "dato"]
+    kb_keywords = ["conoc", "conocimiento", "sab", "saber", "dato", "datos"]
     modo_keywords = ["modo", "mundo", "mono", "madre"]
 
     if not modo_kb:
@@ -341,7 +382,7 @@ def procesar():
 
             return responder_kb(user_text, "Modo juego activado")
 
-    salir_keywords = ["salir", "sali", "sal", "salte", "salte", "sir", "sar", "zalir", "talir"]
+    salir_keywords = ["salir", "sali", "sal", "salte", "sar", "zalir", "talir"]
 
     if contiene_frase_variada(user_text_lower, salir_keywords):
         if modo_juego:
